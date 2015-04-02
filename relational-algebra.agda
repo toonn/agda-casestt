@@ -9,11 +9,11 @@
 
 open import Data.Nat
 open import Data.List renaming (_++_ to append)
-open import Data.Char renaming (show to charToString)
-open import Data.Vec hiding (_++_; lookup)
+open import Data.Char hiding (_==_)renaming (show to charToString)
+open import Data.Vec hiding (_++_; lookup; map)
 open import Data.Bool
-open import Data.String using (String; _++_; toVec)
-open import Data.Product using (_×_; _,_)
+open import Data.String using (String; _++_; toVec; _==_)
+open import Data.Product using (_×_; _,_; proj₁)
 open import IO
 open import Data.Unit
 open import Data.Empty
@@ -84,8 +84,15 @@ postulate
   connect : ServerName → TableName → (s : Schema) → IO (Handle s)
   disjoint : Schema → Schema → Bool
   sub : Schema → Schema → Bool
-  occurs : String → Schema → Bool
-  lookup : (nm : String) → (s : Schema) → So (occurs nm s) → U
+
+occurs : String → Schema → Bool
+occurs nm s = any (_==_ nm) (map (proj₁) s)
+
+lookup : (nm : String) → (s : Schema) → So (occurs nm s) → U
+lookup nm ((name , type) ∷ s') p with nm == name
+... | true  = type
+... | false = lookup nm s' p
+lookup _  []                   ()
 
 data Expr : Schema → U → Set where
   equal : ∀ {u s} → Expr s u → Expr s u → Expr s BOOL
