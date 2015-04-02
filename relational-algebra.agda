@@ -12,7 +12,7 @@ open import Data.List renaming (_++_ to append)
 open import Data.Char hiding (_==_)renaming (show to charToString)
 open import Data.Vec hiding (_++_; lookup; map)
 open import Data.Bool
-open import Data.String using (String; _++_; toVec; _==_)
+open import Data.String using (String; toVec; _==_) renaming (_++_ to _∥_)
 open import Data.Product using (_×_; _,_; proj₁)
 open import IO
 open import Data.Unit
@@ -38,16 +38,16 @@ el (VEC u n) = Vec (el u) n
 el (BOOL)    = Bool
 
 parens : String → String
-parens str = "(" ++ str ++ ")"
+parens str = "(" ∥ str ∥ ")"
 
 show : {u : U} → el u → String
 show {BIT} O = "O"
 show {BIT} I = "I"
 show {CHAR} c = charToString c
 show {NAT} zero    = "Zero"
-show {NAT} (suc k) = "Succ " ++ parens (show k)
+show {NAT} (suc k) = "Succ " ∥ parens (show k)
 show {VEC u zero}    Nil      = "Nil"
-show {VEC u (suc k)} (x ∷ xs) = parens (show x) ++ " ∷ " ++ parens (show xs)
+show {VEC u (suc k)} (x ∷ xs) = parens (show x) ∥ " ∷ " ∥ parens (show xs)
 show {BOOL} true  = "True"
 show {BOOL} false = "False"
 
