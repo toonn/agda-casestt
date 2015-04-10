@@ -6,17 +6,38 @@
           The Power Of Pi
 
 -}
+module relational-algebra where
 
 open import Data.Nat
-open import Data.List renaming (_++_ to append)
-open import Data.Char hiding (_==_)renaming (show to charToString)
-open import Data.Vec hiding (_++_; lookup; map)
+open import Data.List
+open import Data.Char hiding (_==_) renaming (show to charToString)
+open import Data.Vec hiding (_++_; lookup; map; foldr)
 open import Data.Bool
-open import Data.String using (String; toVec; _==_) renaming (_++_ to _∥_)
+open import Data.String using (String; toVec; _==_; strictTotalOrder)
+                        renaming (_++_ to _∥_)
 open import Data.Product using (_×_; _,_; proj₁)
 open import IO
 open import Data.Unit
 open import Data.Empty
+
+open import Relation.Binary
+open StrictTotalOrder Data.String.strictTotalOrder renaming (compare to str_cmp)
+
+data Order : Set where
+  LT EQ GT : Order
+
+module InsertionSort where
+  insert : {A : Set} → (A → A → Order) → A → List A → List A
+  insert _   e [] = e ∷ []
+  insert cmp e (l ∷ ls) with cmp e l
+  ... | GT = l ∷ insert cmp e ls
+  ... | _ = e ∷ l ∷ ls
+
+
+  sort : {A : Set} → (A → A → Order) → List A → List A
+  sort cmp = foldr (insert cmp) []
+open InsertionSort using (insert; sort)
+
 
 data Bit : Set where
   O : Bit
@@ -51,53 +72,91 @@ show {VEC u (suc k)} (x ∷ xs) = parens (show x) ∥ " ∷ " ∥ parens (show x
 show {BOOL} true  = "True"
 show {BOOL} false = "False"
 
-Attribute : Set
-Attribute = String × U
-
-Schema : Set
-Schema = List Attribute
-
-Cars : Schema
-Cars = ("Model" , VEC CHAR 20) ∷ ("Time" , VEC CHAR 6) ∷ ("Wet" , BOOL) ∷ []
-
-data Row : Schema → Set where
-  EmptyRow : Row []
-  ConsRow : ∀ {name u s} → el u → Row s → Row ((name , u) ∷ s)
-
-Table : Schema → Set
-Table s = List (Row s)
-
-zonda : Row Cars
-zonda = ConsRow (toVec "Pagani Zonda C12 F  ")
-        (ConsRow (toVec "1:18.4")
-        (ConsRow false EmptyRow))
-
-ServerName = String
-TableName = String
 
 So : Bool → Set
 So true = Unit
 So false = ⊥
 
+
+module OrderedSchema where
+  Attribute : Set
+  Attribute = String × U
+
+  -- Comparison is actually on column names only
+  attr_cmp : Attribute → Attribute → Order
+  attr_cmp (nm1 , _) (nm2 , _) with str_cmp nm1 nm2
+  ... | tri< _ _ _ = LT
+  ... | tri≈ _ _ _ = EQ
+  ... | tri> _ _ _ = GT
+
+
+  data Schema : Set where
+    sorted : List Attribute → Schema
+
+  mkSchema : List Attribute → Schema
+  mkSchema xs = sorted (sort attr_cmp xs)
+
+  expandSchema : Attribute → Schema → Schema
+  expandSchema x (sorted xs) = sorted (insert attr_cmp x xs)
+
+
+  disjoint : Schema → Schema → Bool
+  disjoint (sorted []      ) _                 = true
+  disjoint _                 (sorted []      ) = true
+  disjoint (sorted (x ∷ xs)) (sorted (y ∷ ys)) with attr_cmp x y
+  ... | LT = disjoint (sorted xs) (sorted (y ∷ ys))
+  ... | EQ = false
+  ... | GT = disjoint (sorted (x ∷ xs)) (sorted ys)
+
+  sub : Schema → Schema → Bool
+  sub (sorted []) _ = true
+  sub (sorted (x ∷ _)) (sorted []) = false
+  sub (sorted (x ∷ xs)) (sorted (X ∷ Xs)) with attr_cmp x X
+  ... | LT = false
+  ... | EQ = sub (sorted xs) (sorted Xs)
+  ... | GT = sub (sorted (x ∷ xs)) (sorted Xs)
+
+  occurs : String → Schema → Bool
+  occurs nm (sorted s) = any (_==_ nm) (map (proj₁) s)
+
+  lookup' : (nm : String) → (s : List Attribute)
+            → So (occurs nm (sorted s)) → U
+  lookup' _  []                   ()
+  lookup' nm ((name , type) ∷ s') p with nm == name
+  ... | true  = type
+  ... | false = lookup' nm s' p
+
+  lookup : (nm : String) → (s : Schema) → So (occurs nm s) → U
+  lookup nm (sorted s) = lookup' nm s
+
+  append : (s s' : Schema) → Schema
+  append (sorted s) (sorted s') = mkSchema (s ++ s')
+open OrderedSchema using (Schema; mkSchema; expandSchema;
+                          disjoint; sub; occurs; lookup;
+                          append)
+
+
+data Row : Schema → Set where
+  EmptyRow : Row (mkSchema [])
+  ConsRow : ∀ {name u s} → el u → Row s → Row (expandSchema (name , u) s)
+
+Table : Schema → Set
+Table s = List (Row s)
+
+ServerName = String
+TableName = String
+
+
 postulate
   Handle : Schema → Set
   connect : ServerName → TableName → (s : Schema) → IO (Handle s)
-  disjoint : Schema → Schema → Bool
-  sub : Schema → Schema → Bool
 
-occurs : String → Schema → Bool
-occurs nm s = any (_==_ nm) (map (proj₁) s)
-
-lookup : (nm : String) → (s : Schema) → So (occurs nm s) → U
-lookup nm ((name , type) ∷ s') p with nm == name
-... | true  = type
-... | false = lookup nm s' p
-lookup _  []                   ()
 
 data Expr : Schema → U → Set where
   equal : ∀ {u s} → Expr s u → Expr s u → Expr s BOOL
   lessThan : ∀ {u s} → Expr s u → Expr s u → Expr s BOOL
   _!_ : (s : Schema) → (nm : String) → {p : So (occurs nm s)} → Expr s (lookup nm s p)
+
 
 data RA : Schema → Set where
   Read    : ∀ {s} → Handle s → RA s
@@ -109,18 +168,6 @@ data RA : Schema → Set where
   Select  : ∀ {s} → Expr s BOOL → RA s → RA s
   -- ...
 
-Models : Schema
-Models = ("Model" , VEC CHAR 20) ∷ []
-
-{- Requires implementation of postulates to pass cleanly?
-
-models : Handle Cars → RA Models
-models h = Project Models (Read h)
-
-wet : Handle Cars → RA Models
-wet h = Project Models (Select (Cars ! "Wet") (Read h))
--}
-
 {- 
   As we mentioned previously, we have taken a very minimal set of relational
   algebra operators. It should be fairly straightforward to add operators
@@ -131,6 +178,7 @@ wet h = Project Models (Select (Cars ! "Wet") (Read h))
   using the same techniques. Alternatively, you can define many of these
   operations in terms of the operations we have implemented in the RA data type.
 -}
+
 
 -- We could:
 postulate
@@ -147,6 +195,25 @@ postulate
   manner. The type checker can then statically check that the program uses the
   returned list in a way consistent with its type.
 -}
+
+
+Cars : Schema
+Cars = mkSchema (("Model" , VEC CHAR 20) ∷ ("Time" , VEC CHAR 6) ∷ ("Wet" , BOOL) ∷ [])
+
+zonda : Row Cars
+zonda = ConsRow (toVec "Pagani Zonda C12 F  ")
+        (ConsRow (toVec "1:18.4")
+        (ConsRow false EmptyRow))
+
+Models : Schema
+Models = mkSchema (("Model" , VEC CHAR 20) ∷ [])
+
+models : Handle Cars → RA Models
+models h = Project Models (Read h)
+
+wet : Handle Cars → RA Models
+wet h = Project Models (Select (Cars ! "Wet") (Read h))
+
 
 {- Discussion
    ==========
