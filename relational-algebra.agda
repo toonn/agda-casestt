@@ -28,49 +28,38 @@ data Order : Set where
 
 module InsertionSort where
   insert : {A : Set} → (A → A → Order) → A → List A → List A
-  insert _   e [] = e ∷ []
+  insert _   e []       = e ∷ []
   insert cmp e (l ∷ ls) with cmp e l
   ... | GT = l ∷ insert cmp e ls
-  ... | _ = e ∷ l ∷ ls
-
+  ... | _  = e ∷ l ∷ ls
 
   sort : {A : Set} → (A → A → Order) → List A → List A
   sort cmp = foldr (insert cmp) []
 open InsertionSort using (insert; sort)
 
 
-data Bit : Set where
-  O : Bit
-  I : Bit
-
 -- Universe U exists of type U and el : U → Set
 data U : Set where
-  BIT  : U
-  CHAR : U
-  NAT  : U
+  CHAR NAT BOOL : U
   VEC  : U → ℕ → U
-  BOOL : U
-
+  
 el : U → Set
-el BIT       = Bit
 el CHAR      = Char
 el NAT       = ℕ
 el (VEC u n) = Vec (el u) n
-el (BOOL)    = Bool
+el BOOL      = Bool
 
 parens : String → String
 parens str = "(" ∥ str ∥ ")"
 
 show : {u : U} → el u → String
-show {BIT} O = "O"
-show {BIT} I = "I"
-show {CHAR} c = charToString c
-show {NAT} zero    = "Zero"
-show {NAT} (suc k) = "Succ " ∥ parens (show k)
-show {VEC u zero}    Nil      = "Nil"
+show {CHAR         } c        = charToString c
+show {NAT          } zero     = "Zero"
+show {NAT          } (suc k)  = "Succ " ∥ parens (show k)
+show {VEC u zero   } Nil      = "Nil"
 show {VEC u (suc k)} (x ∷ xs) = parens (show x) ∥ " ∷ " ∥ parens (show xs)
-show {BOOL} true  = "True"
-show {BOOL} false = "False"
+show {BOOL         } true     = "True"
+show {BOOL         } false    = "False"
 
 
 So : Bool → Set
@@ -101,26 +90,26 @@ module OrderedSchema where
 
 
   disjoint : Schema → Schema → Bool
-  disjoint (sorted []      ) _                 = true
-  disjoint _                 (sorted []      ) = true
+  disjoint (sorted []      ) (_              ) = true
+  disjoint (_              ) (sorted []      ) = true
   disjoint (sorted (x ∷ xs)) (sorted (y ∷ ys)) with attr_cmp x y
-  ... | LT = disjoint (sorted xs) (sorted (y ∷ ys))
+  ... | LT = disjoint (sorted xs      ) (sorted (y ∷ ys))
   ... | EQ = false
-  ... | GT = disjoint (sorted (x ∷ xs)) (sorted ys)
+  ... | GT = disjoint (sorted (x ∷ xs)) (sorted ys      )
 
   sub : Schema → Schema → Bool
-  sub (sorted []) _ = true
-  sub (sorted (x ∷ _)) (sorted []) = false
+  sub (sorted []      ) (_              ) = true
+  sub (sorted (x ∷ _) ) (sorted []      ) = false
   sub (sorted (x ∷ xs)) (sorted (X ∷ Xs)) with attr_cmp x X
   ... | LT = false
-  ... | EQ = sub (sorted xs) (sorted Xs)
+  ... | EQ = sub (sorted xs      ) (sorted Xs)
   ... | GT = sub (sorted (x ∷ xs)) (sorted Xs)
 
   occurs : String → Schema → Bool
   occurs nm (sorted s) = any (_==_ nm) (map (proj₁) s)
 
   lookup' : (nm : String) → (s : List Attribute)
-            → So (occurs nm (sorted s)) → U
+              → So (occurs nm (sorted s)) → U
   lookup' _  []                   ()
   lookup' nm ((name , type) ∷ s') p with nm == name
   ... | true  = type
@@ -138,13 +127,13 @@ open OrderedSchema using (Schema; mkSchema; expandSchema;
 
 data Row : Schema → Set where
   EmptyRow : Row (mkSchema [])
-  ConsRow : ∀ {name u s} → el u → Row s → Row (expandSchema (name , u) s)
+  ConsRow  : ∀ {name u s} → el u → Row s → Row (expandSchema (name , u) s)
 
 Table : Schema → Set
 Table s = List (Row s)
 
 ServerName = String
-TableName = String
+TableName  = String
 
 
 postulate
@@ -153,9 +142,10 @@ postulate
 
 
 data Expr : Schema → U → Set where
-  equal : ∀ {u s} → Expr s u → Expr s u → Expr s BOOL
+  equal    : ∀ {u s} → Expr s u → Expr s u → Expr s BOOL
   lessThan : ∀ {u s} → Expr s u → Expr s u → Expr s BOOL
-  _!_ : (s : Schema) → (nm : String) → {p : So (occurs nm s)} → Expr s (lookup nm s p)
+  _!_      : (s : Schema) → (nm : String) → {p : So (occurs nm s)}
+               → Expr s (lookup nm s p)
 
 
 data RA : Schema → Set where
@@ -198,7 +188,8 @@ postulate
 
 
 Cars : Schema
-Cars = mkSchema (("Model" , VEC CHAR 20) ∷ ("Time" , VEC CHAR 6) ∷ ("Wet" , BOOL) ∷ [])
+Cars = mkSchema (("Model" , VEC CHAR 20) ∷ ("Time" , VEC CHAR 6)
+                 ∷ ("Wet" , BOOL) ∷ [])
 
 zonda : Row Cars
 zonda = ConsRow (toVec "Pagani Zonda C12 F  ")
