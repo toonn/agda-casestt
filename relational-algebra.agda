@@ -63,7 +63,7 @@ show {BOOL         } false    = "False"
 
 
 So : Bool → Set
-So true = Unit
+So true  = ⊤
 So false = ⊥
 
 
