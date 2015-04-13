@@ -11,12 +11,13 @@ module relational-algebra where
 open import Data.Nat
 open import Data.List
 open import Data.Char hiding (_==_) renaming (show to charToString)
-open import Data.Vec hiding (_++_; lookup; map; foldr)
+open import Data.Vec hiding (_++_; lookup; map; foldr; _>>=_)
 open import Data.Bool
 open import Data.String using (String; toVec; _==_; strictTotalOrder)
                         renaming (_++_ to _∥_)
 open import Data.Product using (_×_; _,_; proj₁)
 open import IO
+open import Coinduction
 open import Data.Unit
 open import Data.Empty
 
@@ -68,6 +69,8 @@ So false = ⊥
 
 
 module OrderedSchema where
+  SchemaDescription = String
+
   Attribute : Set
   Attribute = String × U
 
@@ -88,6 +91,9 @@ module OrderedSchema where
   expandSchema : Attribute → Schema → Schema
   expandSchema x (sorted xs) = sorted (insert attr_cmp x xs)
 
+  schemify : SchemaDescription → Schema
+  schemify sdesc = {!!}
+
 
   disjoint : Schema → Schema → Bool
   disjoint (sorted []      ) (_              ) = true
@@ -105,6 +111,9 @@ module OrderedSchema where
   ... | EQ = sub (sorted xs      ) (sorted Xs)
   ... | GT = sub (sorted (x ∷ xs)) (sorted Xs)
 
+  same : Schema → Schema → Bool
+  same s s' = {!!}
+
   occurs : String → Schema → Bool
   occurs nm (sorted s) = any (_==_ nm) (map (proj₁) s)
 
@@ -120,8 +129,8 @@ module OrderedSchema where
 
   append : (s s' : Schema) → Schema
   append (sorted s) (sorted s') = mkSchema (s ++ s')
-open OrderedSchema using (Schema; mkSchema; expandSchema;
-                          disjoint; sub; occurs; lookup;
+open OrderedSchema using (Schema; mkSchema; expandSchema; schemify;
+                          disjoint; sub; same; occurs; lookup;
                           append)
 
 
@@ -132,13 +141,37 @@ data Row : Schema → Set where
 Table : Schema → Set
 Table s = List (Row s)
 
-ServerName = String
-TableName  = String
-
+DatabasePath = String
+TableName    = String
 
 postulate
-  Handle : Schema → Set
-  connect : ServerName → TableName → (s : Schema) → IO (Handle s)
+  Connection : Set
+  connectSqlite3 : DatabasePath → IO Connection
+  describe_table : TableName → Connection → IO String
+  
+-- {-# COMPILED_TYPE Connection Connection #-}
+-- {-# COMPILED connectSqlite3 connectSqlite3 #-}
+
+data Handle : Schema → Set where
+  conn : Connection → (s : Schema) → Handle s
+
+-- Connect currently ignores differences between
+-- the expected schema and the actual schema.
+-- According to tpop this should result in
+-- "a *runtime exception* in the *IO* monad."
+-- Agda does not have exceptions(?)
+--  -> postulate error with a compiled pragma?
+connect : DatabasePath → TableName → (s : Schema) → IO (Handle s)
+connect DB table schema_expect =
+  ♯ (connectSqlite3 DB) >>=
+    (λ sqlite_conn →
+      ♯ (♯ (describe_table table sqlite_conn) >>=
+      (λ description →
+        ♯ (♯ (return (schemify description)) >>=
+        (λ schema_actual →
+          ♯ (♯ (return (same schema_expect schema_actual)) >>=
+          (λ { true  → ♯ (return (conn sqlite_conn schema_expect));
+               false → ♯ (return (conn sqlite_conn schema_expect)) })))))))
 
 
 data Expr : Schema → U → Set where
