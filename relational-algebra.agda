@@ -62,6 +62,17 @@ show {VEC u (suc k)} (x ∷ xs) = parens (show x) ∥ " ∷ " ∥ parens (show x
 show {BOOL         } true     = "True"
 show {BOOL         } false    = "False"
 
+_=ᴺ_ : ℕ → ℕ → Bool
+zero  =ᴺ zero  = true
+suc m =ᴺ suc n = (m =ᴺ n)
+_     =ᴺ _     = false
+
+_=ᵁ_ : U → U → Bool
+CHAR    =ᵁ CHAR      = true
+NAT     =ᵁ NAT       = true
+BOOL    =ᵁ BOOL      = true
+VEC u x =ᵁ VEC u' x' = (u =ᵁ u') ∧ (x =ᴺ x')
+_       =ᵁ _         = false
 
 So : Bool → Set
 So true  = ⊤
@@ -111,8 +122,14 @@ module OrderedSchema where
   ... | EQ = sub (sorted xs      ) (sorted Xs)
   ... | GT = sub (sorted (x ∷ xs)) (sorted Xs)
 
+  same' : List Attribute → List Attribute → Bool
+  same' ([]              ) ([]              ) = true
+  same' ((nm₁ , ty₁) ∷ xs) ((nm₂ , ty₂) ∷ ys) =
+    (nm₁ == nm₂) ∧ (ty₁ =ᵁ ty₂) ∧ same' xs ys
+  same' (_               ) (_               ) = false
+
   same : Schema → Schema → Bool
-  same s s' = {!!}
+  same (sorted xs) (sorted ys) = same' xs ys
 
   occurs : String → Schema → Bool
   occurs nm (sorted s) = any (_==_ nm) (map (proj₁) s)
@@ -147,10 +164,11 @@ TableName    = String
 postulate
   Connection : Set
   connectSqlite3 : DatabasePath → IO Connection
-  describe_table : TableName → Connection → IO String
-  
 -- {-# COMPILED_TYPE Connection Connection #-}
 -- {-# COMPILED connectSqlite3 connectSqlite3 #-}
+
+describe_table : TableName → Connection → IO String
+describe_table table conn = {!!}
 
 data Handle : Schema → Set where
   conn : Connection → (s : Schema) → Handle s
