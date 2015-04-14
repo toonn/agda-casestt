@@ -18,7 +18,7 @@ open import Data.String using (String; toVec; _==_; strictTotalOrder)
 open import Data.Product using (_×_; _,_; proj₁)
 open import IO
 open import Coinduction
-open import Data.Unit
+open import Data.Unit hiding (_≤_)
 open import Data.Empty
 
 open import Relation.Binary
@@ -67,12 +67,34 @@ zero  =ᴺ zero  = true
 suc m =ᴺ suc n = (m =ᴺ n)
 _     =ᴺ _     = false
 
+_≤ᴺ_ : ℕ → ℕ → Order
+zero  ≤ᴺ zero  = EQ
+zero  ≤ᴺ _     = LT
+_     ≤ᴺ zero  = GT
+suc a ≤ᴺ suc b = a ≤ᴺ b
+
 _=ᵁ_ : U → U → Bool
 CHAR    =ᵁ CHAR      = true
 NAT     =ᵁ NAT       = true
 BOOL    =ᵁ BOOL      = true
 VEC u x =ᵁ VEC u' x' = (u =ᵁ u') ∧ (x =ᴺ x')
 _       =ᵁ _         = false
+
+_≤ᵁ_ : U → U → Order
+CHAR ≤ᵁ CHAR = EQ
+CHAR ≤ᵁ _ = LT
+_ ≤ᵁ CHAR = GT
+NAT ≤ᵁ NAT = EQ
+NAT ≤ᵁ _ = LT
+_ ≤ᵁ NAT = GT
+BOOL ≤ᵁ BOOL = EQ
+BOOL ≤ᵁ _ = LT
+_ ≤ᵁ BOOL = GT
+VEC a x ≤ᵁ VEC b y with a ≤ᵁ b
+... | LT = LT
+... | EQ = x ≤ᴺ y
+... | GT = GT
+
 
 So : Bool → Set
 So true  = ⊤
@@ -85,12 +107,15 @@ module OrderedSchema where
   Attribute : Set
   Attribute = String × U
 
-  -- Comparison is actually on column names only
+  -- Compare on type if names are equal.
+  -- SQL DB's probably don't allow columns with the same name
+  -- but nothing prevents us from writing a Schema that does,
+  -- this is necessary to make our sort return a unique answer.
   attr_cmp : Attribute → Attribute → Order
-  attr_cmp (nm1 , _) (nm2 , _) with str_cmp nm1 nm2
-  ... | tri< _ _ _ = LT
-  ... | tri≈ _ _ _ = EQ
-  ... | tri> _ _ _ = GT
+  attr_cmp (nm₁ , U₁) (nm₂ , U₂) with str_cmp nm₁ nm₂ | U₁ ≤ᵁ U₂
+  ... | tri< _ _ _ | _     = LT
+  ... | tri≈ _ _ _ | U₁≤U₂ = U₁≤U₂
+  ... | tri> _ _ _ | _     = GT
 
 
   data Schema : Set where
