@@ -8,18 +8,19 @@
 -}
 module relational-algebra where
 
+open import Data.Empty
+open import Data.Unit hiding (_≤_)
+open import Data.Bool
 open import Data.Nat
+open import Data.Integer hiding (show)
 open import Data.List
 open import Data.Char hiding (_==_) renaming (show to charToString)
 open import Data.Vec hiding (_++_; lookup; map; foldr; _>>=_)
-open import Data.Bool
 open import Data.String using (String; toVec; _==_; strictTotalOrder)
                         renaming (_++_ to _∥_)
 open import Data.Product using (_×_; _,_; proj₁)
-open import IO
 open import Coinduction
-open import Data.Unit hiding (_≤_)
-open import Data.Empty
+open import IO
 
 open import Relation.Binary
 open StrictTotalOrder Data.String.strictTotalOrder renaming (compare to str_cmp)
@@ -100,9 +101,15 @@ So : Bool → Set
 So true  = ⊤
 So false = ⊥
 
+data SqlValue : Set where
+  SqlString  : String → SqlValue
+  SqlChar    : Char   → SqlValue
+  SqlBool    : Bool   → SqlValue
+  SqlInteger : ℤ      → SqlValue
+--{-# COMPILED_DATA SqlValue SqlValue SqlString SqlChar SqlBool SqlInteger #-}
 
 module OrderedSchema where
-  SchemaDescription = String
+  SchemaDescription = List (List SqlValue)
 
   Attribute : Set
   Attribute = String × U
@@ -189,11 +196,11 @@ TableName    = String
 postulate
   Connection : Set
   connectSqlite3 : DatabasePath → IO Connection
+  describe_table : TableName → Connection → IO (List (List SqlValue))
 -- {-# COMPILED_TYPE Connection Connection #-}
 -- {-# COMPILED connectSqlite3 connectSqlite3 #-}
+-- {-# COMPILED describe_table describe_table #-}
 
-describe_table : TableName → Connection → IO String
-describe_table table conn = {!!}
 
 data Handle : Schema → Set where
   conn : Connection → (s : Schema) → Handle s
@@ -233,7 +240,6 @@ data RA : Schema → Set where
   Project : ∀ {s} → (s' : Schema) → {_ : So (sub s' s)} → RA s → RA s'
   Select  : ∀ {s} → Expr s BOOL → RA s → RA s
   -- ...
-
 {- 
   As we mentioned previously, we have taken a very minimal set of relational
   algebra operators. It should be fairly straightforward to add operators
