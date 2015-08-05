@@ -97,19 +97,21 @@ module koopa where
   matsToMat : {w h : ℕ} → Vec (Vec Material w) h → Matrix Position w h
   matsToMat matss = Mat (reverse (matToPosVecs matss))
 
-  □ : Material
-  □ = gas
-  ■ : Material
-  ■ = solid
+  □_ : ∀{n} → Vec Material n → Vec Material (suc n)
+  □ xs = gas ∷ xs
+  ■_ : ∀{n} → Vec Material n → Vec Material (suc n)
+  ■ xs = solid ∷ xs
+  infixr 5 □_
+  infixr 5 ■_
   example_level : Matrix Position 10 7
   example_level = matsToMat (
-    (□ ∷ □ ∷ □ ∷ □ ∷ □ ∷ □ ∷ □ ∷ □ ∷ □ ∷ □ ∷ []) ∷ 
-    (□ ∷ □ ∷ □ ∷ □ ∷ □ ∷ □ ∷ ■ ∷ ■ ∷ ■ ∷ □ ∷ []) ∷ 
-    (□ ∷ □ ∷ □ ∷ □ ∷ □ ∷ □ ∷ □ ∷ □ ∷ □ ∷ □ ∷ []) ∷ 
-    (□ ∷ □ ∷ □ ∷ ■ ∷ ■ ∷ ■ ∷ □ ∷ □ ∷ □ ∷ □ ∷ []) ∷ 
-    (□ ∷ □ ∷ □ ∷ □ ∷ □ ∷ □ ∷ □ ∷ □ ∷ □ ∷ □ ∷ []) ∷ 
-    (■ ∷ □ ∷ □ ∷ □ ∷ □ ∷ □ ∷ □ ∷ □ ∷ □ ∷ ■ ∷ []) ∷ 
-    (■ ∷ ■ ∷ ■ ∷ ■ ∷ ■ ∷ □ ∷ □ ∷ ■ ∷ ■ ∷ ■ ∷ []) ∷ [])
+    □ □ □ □ □ □ □ □ □ □ [] ∷
+    □ □ □ □ □ □ ■ ■ ■ □ [] ∷
+    □ □ □ □ □ □ □ □ □ □ [] ∷
+    □ □ □ ■ ■ ■ □ □ □ □ [] ∷
+    □ □ □ □ □ □ □ □ □ □ [] ∷
+    ■ □ □ □ □ □ □ □ □ ■ [] ∷
+    ■ ■ ■ ■ ■ □ □ ■ ■ ■ [] ∷ [])
 
   _<'_ : ℕ → ℕ → Set
   m <' zero = ⊥
