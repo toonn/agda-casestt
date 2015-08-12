@@ -141,26 +141,24 @@ module koopa where
                  p (f 2) (f 1) ↠⟨ next ⟩
                  p (f 3) (f 1) ↠⟨ next ⟩
                  p (f 4) (f 1) ↠⟨ back ⟩
-                 p (f 3) (f 1) ↠⟨ stay ⟩
-                 []
+                 p (f 3) (f 1) ↠⟨ stay ⟩ []
 
   -- -- Type error shows up 'late' because 'cons' is right associative
   -- red_nopath_one : Path (Red KT) (p (f 1) (f 1)) (p (f 0) (f 1))
   -- red_nopath_one = p (f 1) (f 1) ↠⟨ back ⟩
-  --                  p (f 0) (f 1) ↠⟨ stay ⟩
-  --                  []
+  --                  p (f 0) (f 1) ↠⟨ stay ⟩ []
 
   -- -- Red KoopaTroopa can't step into a wall
   -- red_nopath_two : Path (Red KT) (p (f 1) (f 1)) (p (f 0) (f 1))
   -- red_nopath_two = p (f 1) (f 1) ↠⟨ back ⟩ []
 
-  -- -- Red KoopaTroopa can't step into air
+  -- -- Red Koopa Troopa can't step into air
   -- red_nopath_three : Path (Red KT) (p (f 4) (f 1)) (p (f 5) (f 1))
   -- red_nopath_three = p (f 4) (f 1) ↠⟨ next ⟩ []
 
-  -- Any path that is valid for red KoopaTroopas, is also valid for green
-  -- KoopaTroopas because we did not constrain KoopaTroopas to only turn
-  -- When there is an obstacle
+  -- Any path that is valid for red Koopa Troopas, is also valid for green
+  -- Koopa Troopas because we did not constrain Koopa Troopas to only turn
+  -- when there is an obstacle
   green_path_one : Path (Green KT) (p (f 7) (f 6)) (p (f 8) (f 6))
   green_path_one = p (f 7) (f 6) ↠⟨ back ⟩
                    p (f 6) (f 6) ↠⟨ next ⟩
@@ -183,9 +181,8 @@ module koopa where
                    p (f 2) (f 1) ↠⟨ next ⟩
                    p (f 3) (f 1) ↠⟨ next ⟩
                    p (f 4) (f 1) ↠⟨ next ⟩
-                   p (f 5) (f 1) ↠⟨ fall ⟩
-                   []
+                   p (f 5) (f 1) ↠⟨ fall ⟩ []
 
-  -- -- Green KoopaTroopa can't step into a wall
+  -- -- Green Koopa Troopa can't step into a wall
   -- green_nopath_one : Path (Green KT) (p (f 1) (f 1)) (p (f 0) (f 1))
   -- green_nopath_one = p (f 1) (f 1) ↠⟨ back ⟩ []
