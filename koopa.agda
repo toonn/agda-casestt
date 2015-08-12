@@ -37,7 +37,7 @@ module koopa where
   data Clearance : Set where
     Low  : Clearance
     High : Clearance
-    God  : Clearance
+    Ultimate  : Clearance
 
   record Position : Set where
     constructor pos
@@ -82,7 +82,7 @@ module koopa where
         clearance : Material → Material → Clearance
         clearance gas   gas   = High
         clearance gas   solid = Low
-        clearance solid _     = God
+        clearance solid _     = Ultimate
         cl = clearance mat under
 
   matToPosVecs : {w h : ℕ} → Vec (Vec Material w) h → Vec (Vec Position w) h
