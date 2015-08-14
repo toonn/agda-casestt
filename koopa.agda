@@ -73,11 +73,11 @@ module koopa where
             pos 1 0 gas Low ↠⟨ back ⟩
             pos 0 0 gas Low ↠⟨ stay ⟩ []
 
-  matToPosVec : {n : ℕ} → Vec Material n → Vec Material n → ℕ → ℕ →
-                   Vec Position n
-  matToPosVec []           []        _ _ = []
-  matToPosVec (mat ∷ mats) (under ∷ unders) x y =
-    pos x y mat cl ∷ matToPosVec mats unders (x + 1) y
+  matterToPosVec : {n : ℕ} → Vec Material n → Vec Material n → ℕ → ℕ
+                   → Vec Position n
+  matterToPosVec []           []        _ _ = []
+  matterToPosVec (mat ∷ mats) (under ∷ unders) x y =
+    pos x y mat cl ∷ matterToPosVec mats unders (x + 1) y
       where
         clearance : Material → Material → Clearance
         clearance gas   gas   = High
@@ -85,17 +85,17 @@ module koopa where
         clearance solid _     = Ultimate
         cl = clearance mat under
 
-  matToPosVecs : {w h : ℕ} → Vec (Vec Material w) h → Vec (Vec Position w) h
-  matToPosVecs [] = []
-  matToPosVecs (_∷_ {y} mats matss) =
-    matToPosVec mats (unders matss gas) 0 y ∷ matToPosVecs matss
+  matterToPosVecs : {w h : ℕ} → Vec (Vec Material w) h → Vec (Vec Position w) h
+  matterToPosVecs [] = []
+  matterToPosVecs (_∷_ {y} mats matss) =
+    matterToPosVec mats (unders matss gas) 0 y ∷ matterToPosVecs matss
     where
       unders : ∀ {m n ℓ}{A : Set ℓ} → Vec (Vec A m) n → A → Vec A m
       unders [] fallback = vreplicate fallback
       unders (us ∷ _) _ = us
 
   matsToMat : {w h : ℕ} → Vec (Vec Material w) h → Matrix Position w h
-  matsToMat matss = Mat (reverse (matToPosVecs matss))
+  matsToMat matss = Mat (reverse (matterToPosVecs matss))
 
   □_ : ∀{n} → Vec Material n → Vec Material (suc n)
   □ xs = gas ∷ xs
